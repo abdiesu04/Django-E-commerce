@@ -1,0 +1,190 @@
+{% extends "store/home.html" %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="jumbotron bg-light p-5 rounded">
+        <h1 class="display-4">{{ title }}</h1>
+        <p class="lead">Detailed statistics and analytics</p>
+        <hr class="my-4">
+    </div>
+    
+    <!-- Top Products -->
+    <div class="card mb-4">
+        <div class="card-header bg-primary text-white">
+            <h4 class="card-title mb-0">Top Selling Products</h4>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-striped table-hover">
+                    <thead>
+                        <tr>
+                            <th>Product</th>
+                            <th>SKU</th>
+                            <th>Quantity Sold</th>
+                            <th>Total Revenue</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for product in top_products %}
+                        <tr>
+                            <td>{{ product.name }}</td>
+                            <td>{{ product.sku }}</td>
+                            <td>{{ product.quantity_sold }}</td>
+                            <td>${{ product.total_revenue|floatformat:2 }}</td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="4" class="text-center">No data available</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Top Customers -->
+    <div class="card mb-4">
+        <div class="card-header bg-success text-white">
+            <h4 class="card-title mb-0">Top Customers by Revenue</h4>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-striped table-hover">
+                    <thead>
+                        <tr>
+                            <th>Customer</th>
+                            <th>Email</th>
+                            <th>Invoices</th>
+                            <th>Total Spent</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for customer in top_customers %}
+                        <tr>
+                            <td>{{ customer.customer_name }}</td>
+                            <td>{{ customer.customer_email }}</td>
+                            <td>{{ customer.invoice_count }}</td>
+                            <td>${{ customer.total_spent|floatformat:2 }}</td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="4" class="text-center">No data available</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Vendor Summary -->
+    <div class="row">
+        <div class="col-md-6">
+            <div class="card mb-4">
+                <div class="card-header bg-info text-white">
+                    <h4 class="card-title mb-0">Top Vendors</h4>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-striped table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Vendor</th>
+                                    <th>Orders</th>
+                                    <th>Total Spent</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for vendor in vendor_summary %}
+                                <tr>
+                                    <td>{{ vendor.vendor_name }}</td>
+                                    <td>{{ vendor.order_count }}</td>
+                                    <td>${{ vendor.total_spent|floatformat:2 }}</td>
+                                </tr>
+                                {% empty %}
+                                <tr>
+                                    <td colspan="3" class="text-center">No data available</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Profit Margins -->
+        <div class="col-md-6">
+            <div class="card mb-4">
+                <div class="card-header bg-warning text-dark">
+                    <h4 class="card-title mb-0">Highest Profit Margins</h4>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-striped table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Product</th>
+                                    <th>Cost</th>
+                                    <th>Price</th>
+                                    <th>Margin</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for product in product_margins %}
+                                <tr>
+                                    <td>{{ product.name }}</td>
+                                    <td>${{ product.avg_purchase_price|floatformat:2 }}</td>
+                                    <td>${{ product.avg_sales_price|floatformat:2 }}</td>
+                                    <td>{{ product.profit_margin|floatformat:1 }}%</td>
+                                </tr>
+                                {% empty %}
+                                <tr>
+                                    <td colspan="4" class="text-center">No data available</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Invoice Status -->
+    <div class="card mb-4">
+        <div class="card-header bg-danger text-white">
+            <h4 class="card-title mb-0">Invoice Status Summary</h4>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-striped table-hover">
+                    <thead>
+                        <tr>
+                            <th>Status</th>
+                            <th>Count</th>
+                            <th>Overdue</th>
+                            <th>Total Amount</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for status in invoice_summary %}
+                        <tr>
+                            <td>{{ status.status|capfirst }}</td>
+                            <td>{{ status.count }}</td>
+                            <td>{% if status.overdue_count > 0 %}<span class="badge bg-danger">{{ status.overdue_count }}</span>{% else %}0{% endif %}</td>
+                            <td>${{ status.status_total|floatformat:2 }}</td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="4" class="text-center">No data available</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %} 
