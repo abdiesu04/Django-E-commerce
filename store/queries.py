@@ -123,11 +123,10 @@ def get_invoice_status_summary():
             When(due_date__lt=today, status__in=['draft', 'sent'], then=Value(1)),
             default=Value(0),
             output_field=IntegerField()
-        ),
-        total_amount=Sum(F('line_items__quantity') * F('line_items__price_each'), 
-                        output_field=DecimalField())
+        )
     ).values('status').annotate(
         count=Count('id'),
         overdue_count=Sum('is_overdue'),
-        status_total=Sum('total_amount')
+        status_total=Sum(F('line_items__quantity') * F('line_items__price_each'), 
+                        output_field=DecimalField())
     ).order_by('status') 
