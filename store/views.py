@@ -1,6 +1,8 @@
 from django.shortcuts import render
 from django.db.models import Sum, F, DecimalField
 from django.contrib.admin.views.decorators import staff_member_required
+from django.core.cache import cache
+from django.views.decorators.cache import cache_page
 
 from .models import Product, PurchaseOrder, Invoice
 from . import queries
@@ -50,27 +52,35 @@ def dashboard(request):
     """
     Admin dashboard with detailed statistics
     """
-    # Get top selling products
-    top_products = queries.get_product_sales_analysis()[:5]
+    # Try to get dashboard data from cache
+    cache_key = 'dashboard_data'
+    dashboard_data = cache.get(cache_key)
     
-    # Get vendor purchase summary
-    vendor_summary = queries.get_vendor_purchase_summary()[:5]
-    
-    # Get invoice status summary
-    invoice_summary = queries.get_invoice_status_summary()
-    
-    # Get customer by revenue
-    top_customers = queries.get_customers_by_revenue()[:5]
-    
-    # Get profit margin by product
-    product_margins = queries.get_product_profit_margin()[:5]
+    if dashboard_data is None:
+        # Only run expensive queries if cache is empty
+        # Limit data retrieval to what's necessary
+        top_products = list(queries.get_product_sales_analysis()[:5])
+        vendor_summary = list(queries.get_vendor_purchase_summary()[:5])
+        invoice_summary = list(queries.get_invoice_status_summary())
+        top_customers = list(queries.get_customers_by_revenue()[:5])
+        product_margins = list(queries.get_product_profit_margin()[:5])
+        
+        # Store in cache for 5 minutes
+        dashboard_data = {
+            'top_products': top_products,
+            'vendor_summary': vendor_summary,
+            'invoice_summary': invoice_summary,
+            'top_customers': top_customers,
+            'product_margins': product_margins
+        }
+        cache.set(cache_key, dashboard_data, 300)  # 5 minutes
     
     context = {
         'title': 'Admin Dashboard',
-        'top_products': top_products,
-        'vendor_summary': vendor_summary,
-        'invoice_summary': invoice_summary,
-        'top_customers': top_customers,
-        'product_margins': product_margins
+        'top_products': dashboard_data['top_products'],
+        'vendor_summary': dashboard_data['vendor_summary'],
+        'invoice_summary': dashboard_data['invoice_summary'],
+        'top_customers': dashboard_data['top_customers'],
+        'product_margins': dashboard_data['product_margins']
     }
     return render(request, 'store/dashboard.html', context)
