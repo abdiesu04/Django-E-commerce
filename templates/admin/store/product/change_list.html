@@ -1,0 +1,291 @@
+{% extends "admin/change_list.html" %}
+{% load i18n admin_urls static admin_list %}
+
+{% block extrastyle %}
+  {{ block.super }}
+  <style>
+    .product-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+      gap: 20px;
+      padding: 15px;
+      margin-top: 20px;
+    }
+    
+    .product-card {
+      background-color: white;
+      border-radius: 10px;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.08);
+      overflow: hidden;
+      transition: all 0.3s ease;
+      position: relative;
+      color: #333;
+    }
+    
+    .product-card:hover {
+      transform: translateY(-5px);
+      box-shadow: 0 8px 25px rgba(0,0,0,0.12);
+    }
+    
+    .product-header {
+      background-color: #4361ee;
+      color: white;
+      padding: 15px;
+      font-weight: 600;
+      font-size: 16px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    
+    .product-body {
+      padding: 15px;
+      color: #333;
+    }
+    
+    .product-image {
+      height: 180px;
+      background-color: #f8f9fa;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+      margin-bottom: 15px;
+      border-radius: 8px;
+    }
+    
+    .product-image img {
+      max-width: 100%;
+      max-height: 100%;
+      object-fit: contain;
+    }
+    
+    .product-detail {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 10px;
+      font-size: 14px;
+      color: #333;
+    }
+    
+    .product-detail strong {
+      color: #4361ee;
+    }
+    
+    .product-sku {
+      font-size: 12px;
+      color: #6c757d;
+      margin-bottom: 10px;
+    }
+    
+    .product-price {
+      font-size: 18px;
+      font-weight: 600;
+      color: #2ecc71;
+      margin-bottom: 10px;
+    }
+    
+    .product-stock {
+      display: inline-block;
+      padding: 5px 10px;
+      border-radius: 30px;
+      font-size: 12px;
+      font-weight: 600;
+    }
+    
+    .in-stock {
+      background-color: rgba(46, 204, 113, 0.1);
+      color: #2ecc71;
+    }
+    
+    .low-stock {
+      background-color: rgba(243, 156, 18, 0.1);
+      color: #f39c12;
+    }
+    
+    .out-of-stock {
+      background-color: rgba(231, 76, 60, 0.1);
+      color: #e74c3c;
+    }
+    
+    .product-actions {
+      display: flex;
+      justify-content: flex-end;
+      gap: 10px;
+      margin-top: 15px;
+    }
+    
+    .product-actions a {
+      padding: 8px 12px;
+      border-radius: 6px;
+      font-size: 12px;
+      font-weight: 500;
+      text-decoration: none;
+      color: white;
+    }
+    
+    .edit-btn {
+      background-color: #4361ee;
+    }
+    
+    .delete-btn {
+      background-color: #e74c3c;
+    }
+    
+    .view-toggle {
+      display: flex;
+      justify-content: flex-end;
+      margin-bottom: 15px;
+    }
+    
+    .view-toggle button {
+      background-color: white;
+      border: 1px solid #ddd;
+      padding: 8px 12px;
+      cursor: pointer;
+    }
+    
+    .view-toggle button.active {
+      background-color: #4361ee;
+      color: white;
+      border-color: #4361ee;
+    }
+    
+    .view-toggle button:first-child {
+      border-radius: 6px 0 0 6px;
+    }
+    
+    .view-toggle button:last-child {
+      border-radius: 0 6px 6px 0;
+    }
+    
+    .grid-view, .list-view {
+      display: none;
+    }
+    
+    .grid-view.active, .list-view.active {
+      display: block;
+    }
+    
+    .grid-view {
+      width: 100%;
+    }
+  </style>
+{% endblock %}
+
+{% block content %}
+  <div id="content-main">
+    {% block object-tools %}
+      <ul class="object-tools">
+        {% block object-tools-items %}
+          {% change_list_object_tools %}
+        {% endblock %}
+      </ul>
+    {% endblock %}
+    
+    <div class="view-toggle">
+      <button id="list-view-btn" class="active"><i class="fas fa-list"></i> List View</button>
+      <button id="grid-view-btn"><i class="fas fa-th-large"></i> Grid View</button>
+    </div>
+
+    {% if cl.search_fields or cl.has_filters %}
+      <div id="changelist-filter-actions" class="module filtered">
+        <div class="changelist-filter-wrapper">
+          {% block search %}{% search_form cl %}{% endblock %}
+          {% block filters %}
+            {% if cl.has_filters %}
+              <div id="changelist-filter">
+                <h2>{% trans 'Filter' %}</h2>
+                {% for spec in cl.filter_specs %}{% admin_list_filter cl spec %}{% endfor %}
+              </div>
+            {% endif %}
+          {% endblock %}
+        </div>
+      </div>
+    {% endif %}
+
+    <form id="changelist-form" method="post"{% if cl.formset and cl.formset.is_multipart %} enctype="multipart/form-data"{% endif %} novalidate>{% csrf_token %}
+      {% if cl.formset %}
+        <div>{{ cl.formset.management_form }}</div>
+      {% endif %}
+
+      <div class="list-view active">
+        {% block result_list %}
+          {% if action_form and actions_on_top and cl.show_admin_actions %}{% admin_actions %}{% endif %}
+          {% result_list cl %}
+          {% if action_form and actions_on_bottom and cl.show_admin_actions %}{% admin_actions %}{% endif %}
+        {% endblock %}
+      </div>
+      
+      <div class="grid-view">
+        <div class="product-grid">
+          {% for item in cl.result_list %}
+            <div class="product-card">
+              <div class="product-header">
+                {{ item.name }}
+                <span class="product-sku">SKU: {{ item.sku }}</span>
+              </div>
+              <div class="product-body">
+                <div class="product-image">
+                  {% if item.image %}
+                    <img src="{{ item.image.url }}" alt="{{ item.name }}">
+                  {% else %}
+                    <i class="fas fa-box fa-3x" style="color: #ddd;"></i>
+                  {% endif %}
+                </div>
+                <div class="product-price">${{ item.unit_price }}</div>
+                <div class="product-detail">
+                  <span>Stock:</span>
+                  {% if item.stock_quantity > 20 %}
+                    <span class="status-badge in-stock">{{ item.stock_quantity }} in stock</span>
+                  {% elif item.stock_quantity > 0 %}
+                    <span class="status-badge low-stock">{{ item.stock_quantity }} in stock</span>
+                  {% else %}
+                    <span class="status-badge out-of-stock">Out of stock</span>
+                  {% endif %}
+                </div>
+                <div class="product-detail">
+                  <span>Inventory Value:</span>
+                  <strong>${{ item.get_inventory_value }}</strong>
+                </div>
+                <div class="product-actions">
+                  <a href="{% url 'admin:store_product_change' item.pk %}" class="edit-btn">
+                    <i class="fas fa-edit"></i> Edit
+                  </a>
+                  <a href="{% url 'admin:store_product_delete' item.pk %}" class="delete-btn">
+                    <i class="fas fa-trash"></i> Delete
+                  </a>
+                </div>
+              </div>
+            </div>
+          {% endfor %}
+        </div>
+      </div>
+
+      {% block pagination %}{% pagination cl %}{% endblock %}
+    </form>
+  </div>
+  
+  <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      const listViewBtn = document.getElementById('list-view-btn');
+      const gridViewBtn = document.getElementById('grid-view-btn');
+      const listView = document.querySelector('.list-view');
+      const gridView = document.querySelector('.grid-view');
+      
+      listViewBtn.addEventListener('click', function() {
+        listViewBtn.classList.add('active');
+        gridViewBtn.classList.remove('active');
+        listView.classList.add('active');
+        gridView.classList.remove('active');
+      });
+      
+      gridViewBtn.addEventListener('click', function() {
+        gridViewBtn.classList.add('active');
+        listViewBtn.classList.remove('active');
+        gridView.classList.add('active');
+        listView.classList.remove('active');
+      });
+    });
+  </script>
+{% endblock %} 

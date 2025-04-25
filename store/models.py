@@ -5,13 +5,13 @@ import uuid
 
 class Product(models.Model):
     """Model for storing product information"""
-    name = models.CharField(max_length=255)
-    sku = models.CharField(max_length=50, unique=True, help_text="Stock Keeping Unit")
+    name = models.CharField(max_length=255, db_index=True)
+    sku = models.CharField(max_length=50, unique=True, help_text="Stock Keeping Unit", db_index=True)
     description = models.TextField(blank=True)
     unit_price = models.DecimalField(max_digits=10, decimal_places=2)
-    stock_quantity = models.PositiveIntegerField(default=0)
+    stock_quantity = models.PositiveIntegerField(default=0, db_index=True)
     image = models.ImageField(upload_to='products/', blank=True, null=True)
-    created_at = models.DateTimeField(auto_now_add=True)
+    created_at = models.DateTimeField(auto_now_add=True, db_index=True)
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
@@ -24,6 +24,8 @@ class Product(models.Model):
 
     def get_inventory_value(self):
         """Calculate the total inventory value for this product"""
+        if self.unit_price is None:
+            return 0
         return self.unit_price * self.stock_quantity
 
 class PurchaseOrder(models.Model):
@@ -92,13 +94,13 @@ class Invoice(models.Model):
         ('overdue', 'Overdue'),
     )
     
-    invoice_number = models.CharField(max_length=50, unique=True, default=uuid.uuid4)
-    customer_name = models.CharField(max_length=255)
-    customer_email = models.EmailField()
+    invoice_number = models.CharField(max_length=50, unique=True, default=uuid.uuid4, db_index=True)
+    customer_name = models.CharField(max_length=255, db_index=True)
+    customer_email = models.EmailField(db_index=True)
     billing_address = models.TextField()
-    invoice_date = models.DateTimeField(default=timezone.now)
-    due_date = models.DateField()
-    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='draft')
+    invoice_date = models.DateTimeField(default=timezone.now, db_index=True)
+    due_date = models.DateField(db_index=True)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='draft', db_index=True)
     notes = models.TextField(blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)

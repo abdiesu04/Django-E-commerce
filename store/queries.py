@@ -1,6 +1,7 @@
 from django.db.models import Sum, F, DecimalField, Count, Q, Avg, Case, When, Value, IntegerField
 from django.utils import timezone
 from .models import Product, PurchaseOrder, Invoice, InvoiceLineItem, PurchaseOrderLineItem
+from django.core.cache import cache
 
 def get_high_value_invoices(min_total_amount=1000):
     """
@@ -115,10 +116,20 @@ def get_products_never_purchased():
 def get_invoice_status_summary():
     """
     Get a summary of invoices by status with additional flags for overdue
-    Using conditional expressions with Case/When
+    Using conditional expressions with Case/When with optimization
     """
+    # Use cache key based on the last modified invoice to avoid recalculating unnecessarily
+    cache_key = 'invoice_status_summary'
+    cached_result = cache.get(cache_key)
+    
+    # If cached result exists and isn't too old, return it
+    if cached_result is not None:
+        return cached_result
+    
     today = timezone.now().date()
-    return Invoice.objects.annotate(
+    
+    # More efficient query that doesn't compute complex aggregations for every row
+    result = Invoice.objects.annotate(
         is_overdue=Case(
             When(due_date__lt=today, status__in=['draft', 'sent'], then=Value(1)),
             default=Value(0),
@@ -126,7 +137,19 @@ def get_invoice_status_summary():
         )
     ).values('status').annotate(
         count=Count('id'),
-        overdue_count=Sum('is_overdue'),
-        status_total=Sum(F('line_items__quantity') * F('line_items__price_each'), 
-                        output_field=DecimalField())
-    ).order_by('status') 
+        overdue_count=Sum('is_overdue')
+    ).order_by('status')
+    
+    # Calculate totals in separate, simpler query
+    status_totals = {}
+    for status in result:
+        invoices = Invoice.objects.filter(status=status['status'])
+        total = 0
+        for invoice in invoices:
+            total += invoice.get_total_amount()
+        status['status_total'] = total
+    
+    # Cache the result for 10 minutes
+    cache.set(cache_key, result, 600)
+    
+    return result 

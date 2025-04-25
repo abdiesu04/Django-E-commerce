@@ -17,18 +17,40 @@ from .models import (
     InvoiceLineItem
 )
 
+class StockStatusFilter(admin.SimpleListFilter):
+    title = 'Stock Status'
+    parameter_name = 'stock_status'
+    
+    def lookups(self, request, model_admin):
+        return (
+            ('out', 'Out of Stock'),
+            ('low', 'Low Stock (≤ 10)'),
+            ('in', 'In Stock (> 10)'),
+        )
+    
+    def queryset(self, request, queryset):
+        if self.value() == 'out':
+            return queryset.filter(stock_quantity=0)
+        if self.value() == 'low':
+            return queryset.filter(stock_quantity__gt=0, stock_quantity__lte=10)
+        if self.value() == 'in':
+            return queryset.filter(stock_quantity__gt=10)
+
 @admin.register(Product)
 class ProductAdmin(admin.ModelAdmin):
-    list_display = ('name', 'sku', 'unit_price', 'stock_quantity', 'inventory_value')
-    list_filter = ('created_at',)
+    list_display = ('product_image_thumbnail', 'name', 'sku', 'unit_price', 'stock_status', 'inventory_value')
+    list_filter = ('created_at', StockStatusFilter)
     search_fields = ('name', 'sku', 'description')
-    readonly_fields = ('created_at', 'updated_at')
+    readonly_fields = ('created_at', 'updated_at', 'product_image_preview', 'inventory_value_display')
+    list_per_page = 20
+    save_on_top = True
+    
     fieldsets = (
         ('Basic Information', {
-            'fields': ('name', 'sku', 'description', 'image')
+            'fields': ('name', 'sku', 'description', 'image', 'product_image_preview')
         }),
         ('Pricing and Inventory', {
-            'fields': ('unit_price', 'stock_quantity')
+            'fields': ('unit_price', 'stock_quantity', 'inventory_value_display')
         }),
         ('Metadata', {
             'fields': ('created_at', 'updated_at'),
@@ -36,9 +58,78 @@ class ProductAdmin(admin.ModelAdmin):
         }),
     )
     
+    # Custom CSS for admin
+    class Media:
+        css = {
+            'all': ('admin/css/custom_admin.css',)
+        }
+    
+    def product_image_thumbnail(self, obj):
+        if obj.image:
+            return format_html('<img src="{}" width="50" height="50" style="object-fit: cover; border-radius: 5px;" />', obj.image.url)
+        return format_html('<div style="width: 50px; height: 50px; background-color: #f8f9fa; border-radius: 5px; display: flex; align-items: center; justify-content: center;"><i class="fas fa-box" style="color: #adb5bd;"></i></div>')
+    product_image_thumbnail.short_description = 'Image'
+    
+    def product_image_preview(self, obj):
+        if obj.image:
+            return format_html('<img src="{}" width="300" style="border-radius: 8px; box-shadow: 0 4px 8px rgba(0,0,0,0.1);" />', obj.image.url)
+        return format_html('<div style="width: 300px; height: 200px; background-color: #f8f9fa; border-radius: 8px; display: flex; align-items: center; justify-content: center;"><span style="color: #adb5bd; font-size: 16px;">No image available</span></div>')
+    product_image_preview.short_description = 'Image Preview'
+    
     def inventory_value(self, obj):
-        return f"${obj.get_inventory_value()}"
+        try:
+            value = obj.get_inventory_value()
+            if value > 1000:
+                return format_html('<span style="color: #28a745; font-weight: bold;">${:,.2f}</span>', value)
+            return format_html('${:,.2f}', value)
+        except Exception:
+            return format_html('$0.00')
     inventory_value.short_description = 'Inventory Value'
+    
+    def inventory_value_display(self, obj):
+        try:
+            value = obj.get_inventory_value()
+            return format_html('<div style="font-size: 1.5em; color: #28a745; font-weight: bold;">${:,.2f}</div>', value)
+        except Exception:
+            return format_html('<div style="font-size: 1.5em; color: #6c757d;">$0.00</div>')
+    inventory_value_display.short_description = 'Inventory Value'
+    
+    def stock_status(self, obj):
+        if obj.stock_quantity <= 0:
+            return format_html('<span class="status-badge out-of-stock">Out of Stock</span>')
+        elif obj.stock_quantity <= 10:
+            return format_html('<span class="status-badge low-stock">Low Stock ({0})</span>', obj.stock_quantity)
+        else:
+            return format_html('<span class="status-badge in-stock">In Stock ({0})</span>', obj.stock_quantity)
+    stock_status.short_description = 'Stock Status'
+
+    def get_actions(self, request):
+        actions = super().get_actions(request)
+        actions['export_to_csv'] = (self.export_to_csv, 'export_to_csv', 'Export selected products to CSV')
+        return actions
+
+    def export_to_csv(self, modeladmin, request, queryset):
+        import csv
+        from django.http import HttpResponse
+        
+        response = HttpResponse(content_type='text/csv')
+        response['Content-Disposition'] = 'attachment; filename="products.csv"'
+        
+        writer = csv.writer(response)
+        writer.writerow(['Name', 'SKU', 'Unit Price', 'Stock Quantity', 'Inventory Value'])
+        
+        for product in queryset:
+            writer.writerow([
+                product.name, 
+                product.sku, 
+                product.unit_price, 
+                product.stock_quantity, 
+                product.get_inventory_value()
+            ])
+            
+        messages.success(request, f'{queryset.count()} products exported to CSV.')
+        return response
+    export_to_csv.short_description = 'Export to CSV'
 
 class PurchaseOrderLineItemInline(admin.TabularInline):
     model = PurchaseOrderLineItem
@@ -137,19 +228,19 @@ class InvoiceAdmin(admin.ModelAdmin):
     total_amount.short_description = 'Total Amount'
     
     def status_colored(self, obj):
-        colors = {
-            'draft': '#6c757d',      # Gray
-            'sent': '#17a2b8',       # Info blue
-            'paid': '#28a745',       # Success green
-            'cancelled': '#dc3545',  # Danger red
-            'overdue': '#dc3545'     # Danger red
+        if obj.is_overdue() and obj.status != 'paid' and obj.status != 'cancelled':
+            return format_html('<span class="status-badge overdue">OVERDUE</span>')
+        
+        status_classes = {
+            'draft': 'draft',
+            'sent': 'sent',
+            'paid': 'paid',
+            'cancelled': 'cancelled',
+            'overdue': 'overdue'
         }
         
-        if obj.is_overdue() and obj.status != 'paid' and obj.status != 'cancelled':
-            return format_html('<span style="color: {}; font-weight: bold;">OVERDUE</span>', colors['overdue'])
-        
-        return format_html('<span style="color: {};">{}</span>', 
-                          colors.get(obj.status, '#6c757d'), 
+        return format_html('<span class="status-badge {}">{}</span>', 
+                          status_classes.get(obj.status, 'draft'), 
                           obj.get_status_display())
     status_colored.short_description = 'Status'
     

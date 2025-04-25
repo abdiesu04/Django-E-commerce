@@ -1,0 +1,70 @@
+{% extends "admin/base.html" %}
+{% load static %}
+
+{% block title %}{{ title }} | {{ site_title|default:_('Django site admin') }}{% endblock %}
+
+{% block extrastyle %}
+    {{ block.super }}
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" type="text/css" href="{% static 'admin/css/custom_admin.css' %}">
+    <style>
+        /* Critical inline styles to ensure visibility */
+        #header a, #header a:link, #header a:visited { color: white; }
+        #user-tools, #user-tools a { color: white; }
+        .module h2, .module caption { color: white; }
+        .object-tools a { color: white; }
+        .welcome-card p, .welcome-card h2 { color: white; }
+        .app-header { color: white; }
+        .status-badge { color: white !important; }
+    </style>
+{% endblock %}
+
+{% block branding %}
+<h1 id="site-name">
+    <a href="{% url 'admin:index' %}">
+        <i class="fas fa-store me-2"></i> {{ site_header|default:_('E-Commerce Administration') }}
+    </a>
+</h1>
+{% endblock %}
+
+{% block nav-global %}{% endblock %}
+
+{% block footer %}
+<div id="footer">
+    <div class="container">
+        <p class="text-center">
+            <strong>E-Commerce Admin</strong> - A modern admin interface for your Django application
+        </p>
+    </div>
+</div>
+<script>
+    // Add "modern" class to the body
+    document.body.classList.add('modern-admin');
+    
+    // Replace SVG icons with Font Awesome icons
+    document.addEventListener('DOMContentLoaded', function() {
+        // Add icons to the app list
+        const appList = document.querySelectorAll('.app-list .app');
+        appList.forEach(app => {
+            const title = app.querySelector('h3').textContent.trim().toLowerCase();
+            let icon = 'fas fa-cube';
+            
+            if (title.includes('store')) icon = 'fas fa-store';
+            if (title.includes('auth') || title.includes('user')) icon = 'fas fa-users';
+            if (title.includes('admin')) icon = 'fas fa-cog';
+            
+            const header = app.querySelector('h3');
+            header.innerHTML = `<i class="${icon} me-2"></i> ${header.textContent}`;
+        });
+        
+        // Add icons to the admin actions
+        const actionLinks = document.querySelectorAll('.object-tools a');
+        actionLinks.forEach(link => {
+            if (link.textContent.includes('Add')) {
+                link.innerHTML = `<i class="fas fa-plus me-1"></i> ${link.textContent}`;
+            }
+        });
+    });
+</script>
+{% endblock %} 
