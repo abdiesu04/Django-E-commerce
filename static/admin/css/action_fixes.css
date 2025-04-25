@@ -1,0 +1,67 @@
+/* Action Button Fixes */
+
+/* Fix select dropdown text color */
+.actions select,
+select[name="action"] {
+  color: #333333 !important;
+  background-color: white !important;
+}
+
+/* Fix option text color in dropdowns */
+.actions select option,
+select[name="action"] option {
+  color: #333333 !important;
+  background-color: white !important;
+}
+
+/* Fix action button text color */
+.actions .button {
+  background-color: #000000 !important;
+  color: white !important;
+  font-weight: 500 !important;
+}
+
+/* Fix hover state */
+.actions .button:hover {
+  background-color: #333333 !important;
+  color: white !important;
+}
+
+/* Fix specific options */
+option[value="export_to_xlsx"],
+option[value="export_to_csv"],
+option[value="mark_as_paid"] {
+  font-weight: bold !important;
+  color: #000000 !important;
+}
+
+/* Make label text visible */
+.actions label {
+  color: #333333 !important;
+  font-weight: 500 !important;
+}
+
+/* Additional fixes for Django admin interfaces */
+#changelist-form .actions select {
+  color: #333333 !important;
+}
+
+#changelist-form .actions .button {
+  color: white !important;
+}
+
+/* Fix for Firefox */
+#changelist-form select {
+  color: #333333 !important;
+  text-shadow: none !important;
+}
+
+/* Fix for action form label */
+#changelist-form .actions label {
+  color: #333333 !important;
+}
+
+/* Override any conflicting styles */
+.select-across + label {
+  color: #333333 !important;
+} 

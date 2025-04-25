@@ -61,7 +61,7 @@ class ProductAdmin(admin.ModelAdmin):
     # Custom CSS for admin
     class Media:
         css = {
-            'all': ('admin/css/custom_admin.css',)
+            'all': ('admin/css/custom_admin.css', 'admin/css/action_fixes.css',)
         }
     
     def product_image_thumbnail(self, obj):
@@ -166,6 +166,12 @@ class PurchaseOrderAdmin(admin.ModelAdmin):
     inlines = [PurchaseOrderLineItemInline]
     date_hierarchy = 'order_date'
     
+    # Add Media class for custom CSS
+    class Media:
+        css = {
+            'all': ('admin/css/custom_admin.css', 'admin/css/action_fixes.css',)
+        }
+    
     fieldsets = (
         ('Order Information', {
             'fields': ('order_number', 'vendor_name', 'status')
@@ -216,6 +222,12 @@ class InvoiceAdmin(admin.ModelAdmin):
     inlines = [InvoiceLineItemInline]
     date_hierarchy = 'invoice_date'
     actions = ['mark_as_paid', 'export_to_xlsx']
+    
+    # Add Media class for custom CSS
+    class Media:
+        css = {
+            'all': ('admin/css/custom_admin.css', 'admin/css/action_fixes.css',)
+        }
     
     fieldsets = (
         ('Invoice Information', {
