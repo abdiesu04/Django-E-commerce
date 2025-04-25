@@ -420,4 +420,47 @@ select {
   .colM {
     margin-right: 0;
   }
+}
+
+/* Admin actions */
+.actions {
+  padding: 10px;
+  background-color: #f8f9fa;
+  border-radius: var(--border-radius);
+  margin-bottom: 15px;
+}
+
+.actions select {
+  padding: 8px;
+  border-radius: var(--border-radius);
+  border: 1px solid #ddd;
+  background-color: white;
+  margin-right: 5px;
+}
+
+.actions .button {
+  background-color: #000000;
+  color: white;
+  padding: 8px 12px;
+  border-radius: var(--border-radius);
+  border: none;
+  cursor: pointer;
+  transition: var(--transition);
+}
+
+.actions .button:hover {
+  background-color: #333333;
+  color: white;
+}
+
+/* Make sure all action buttons are visible with good contrast */
+.actions label {
+  color: #333;
+  font-weight: 500;
+}
+
+/* Add a specific style for the export action */
+.actions select option[value="export_to_xlsx"],
+.actions select option[value="export_to_csv"] {
+  font-weight: bold;
 } 

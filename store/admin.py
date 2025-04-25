@@ -109,26 +109,39 @@ class ProductAdmin(admin.ModelAdmin):
         return actions
 
     def export_to_csv(self, modeladmin, request, queryset):
-        import csv
-        from django.http import HttpResponse
-        
-        response = HttpResponse(content_type='text/csv')
-        response['Content-Disposition'] = 'attachment; filename="products.csv"'
-        
-        writer = csv.writer(response)
-        writer.writerow(['Name', 'SKU', 'Unit Price', 'Stock Quantity', 'Inventory Value'])
-        
-        for product in queryset:
-            writer.writerow([
-                product.name, 
-                product.sku, 
-                product.unit_price, 
-                product.stock_quantity, 
-                product.get_inventory_value()
-            ])
+        try:
+            import csv
             
-        messages.success(request, f'{queryset.count()} products exported to CSV.')
-        return response
+            # Set proper content type and filename
+            filename = "products.csv"
+            content_type = 'text/csv'
+            
+            # Create the response
+            response = HttpResponse(content_type=content_type)
+            response['Content-Disposition'] = f'attachment; filename="{filename}"'
+            
+            # Use csv writer for generating the content
+            writer = csv.writer(response)
+            writer.writerow(['Name', 'SKU', 'Unit Price', 'Stock Quantity', 'Inventory Value'])
+            
+            # Write the data
+            for product in queryset:
+                writer.writerow([
+                    product.name, 
+                    product.sku, 
+                    product.unit_price, 
+                    product.stock_quantity, 
+                    product.get_inventory_value()
+                ])
+                
+            # Add success message
+            messages.success(request, f'{queryset.count()} products exported to CSV successfully.')
+            return response
+            
+        except Exception as e:
+            messages.error(request, f'Error exporting products to CSV: {str(e)}')
+            return None
+            
     export_to_csv.short_description = 'Export to CSV'
 
 class PurchaseOrderLineItemInline(admin.TabularInline):
@@ -270,90 +283,105 @@ class InvoiceAdmin(admin.ModelAdmin):
         
         invoice = queryset.first()
         
-        # Create workbook and sheet
-        wb = openpyxl.Workbook()
-        ws = wb.active
-        ws.title = f"Invoice {invoice.invoice_number}"
-        
-        # Define styles
-        header_font = Font(bold=True, size=12)
-        header_fill = PatternFill(start_color="DDDDDD", end_color="DDDDDD", fill_type="solid")
-        
-        # Company header
-        ws.merge_cells('A1:F1')
-        ws['A1'] = 'E-COMMERCE MANAGEMENT SYSTEM'
-        ws['A1'].font = Font(bold=True, size=16)
-        ws['A1'].alignment = Alignment(horizontal='center')
-        
-        # Invoice information
-        ws['A3'] = 'Invoice Number:'
-        ws['B3'] = str(invoice.invoice_number)
-        ws['A3'].font = header_font
-        
-        ws['A4'] = 'Date:'
-        ws['B4'] = invoice.invoice_date.strftime('%Y-%m-%d')
-        ws['A4'].font = header_font
-        
-        ws['A5'] = 'Due Date:'
-        ws['B5'] = invoice.due_date.strftime('%Y-%m-%d')
-        ws['A5'].font = header_font
-        
-        ws['A6'] = 'Status:'
-        ws['B6'] = invoice.get_status_display()
-        ws['A6'].font = header_font
-        
-        # Customer information
-        ws['D3'] = 'Customer:'
-        ws['E3'] = invoice.customer_name
-        ws['D3'].font = header_font
-        
-        ws['D4'] = 'Email:'
-        ws['E4'] = invoice.customer_email
-        ws['D4'].font = header_font
-        
-        ws['D5'] = 'Billing Address:'
-        ws['E5'] = invoice.billing_address.replace("\n", ", ")
-        ws['D5'].font = header_font
-        
-        # Line items header
-        row = 8
-        headers = ['Product', 'SKU', 'Quantity', 'Price Each', 'Subtotal']
-        for col, header in enumerate(headers, 1):
-            cell = ws.cell(row=row, column=col, value=header)
-            cell.font = header_font
-            cell.fill = header_fill
-        
-        # Line items
-        row += 1
-        for item in invoice.line_items.all():
-            ws.cell(row=row, column=1, value=item.product.name)
-            ws.cell(row=row, column=2, value=item.product.sku)
-            ws.cell(row=row, column=3, value=item.quantity)
-            ws.cell(row=row, column=4, value=float(item.price_each))
-            ws.cell(row=row, column=5, value=float(item.get_subtotal()))
+        try:
+            # Create workbook and sheet
+            wb = openpyxl.Workbook()
+            ws = wb.active
+            ws.title = f"Invoice {invoice.invoice_number}"
+            
+            # Define styles
+            header_font = Font(bold=True, size=12)
+            header_fill = PatternFill(start_color="DDDDDD", end_color="DDDDDD", fill_type="solid")
+            
+            # Company header
+            ws.merge_cells('A1:F1')
+            ws['A1'] = 'E-COMMERCE MANAGEMENT SYSTEM'
+            ws['A1'].font = Font(bold=True, size=16)
+            ws['A1'].alignment = Alignment(horizontal='center')
+            
+            # Invoice information
+            ws['A3'] = 'Invoice Number:'
+            ws['B3'] = str(invoice.invoice_number)
+            ws['A3'].font = header_font
+            
+            ws['A4'] = 'Date:'
+            ws['B4'] = invoice.invoice_date.strftime('%Y-%m-%d')
+            ws['A4'].font = header_font
+            
+            ws['A5'] = 'Due Date:'
+            ws['B5'] = invoice.due_date.strftime('%Y-%m-%d')
+            ws['A5'].font = header_font
+            
+            ws['A6'] = 'Status:'
+            ws['B6'] = invoice.get_status_display()
+            ws['A6'].font = header_font
+            
+            # Customer information
+            ws['D3'] = 'Customer:'
+            ws['E3'] = invoice.customer_name
+            ws['D3'].font = header_font
+            
+            ws['D4'] = 'Email:'
+            ws['E4'] = invoice.customer_email
+            ws['D4'].font = header_font
+            
+            ws['D5'] = 'Billing Address:'
+            ws['E5'] = invoice.billing_address.replace("\n", ", ")
+            ws['D5'].font = header_font
+            
+            # Line items header
+            row = 8
+            headers = ['Product', 'SKU', 'Quantity', 'Price Each', 'Subtotal']
+            for col, header in enumerate(headers, 1):
+                cell = ws.cell(row=row, column=col, value=header)
+                cell.font = header_font
+                cell.fill = header_fill
+            
+            # Line items
             row += 1
-        
-        # Total
-        ws.cell(row=row+1, column=4, value='Total:')
-        ws.cell(row=row+1, column=4).font = header_font
-        ws.cell(row=row+1, column=5, value=float(invoice.get_total_amount()))
-        ws.cell(row=row+1, column=5).font = header_font
-        
-        # Adjust column widths
-        for col in ['A', 'B', 'C', 'D', 'E']:
-            ws.column_dimensions[col].width = 20
-        
-        # Create response
-        buffer = BytesIO()
-        wb.save(buffer)
-        buffer.seek(0)
-        
-        response = HttpResponse(
-            buffer.getvalue(),
-            content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
-        )
-        response['Content-Disposition'] = f'attachment; filename=Invoice_{invoice.invoice_number}.xlsx'
-        return response
+            for item in invoice.line_items.all():
+                ws.cell(row=row, column=1, value=item.product.name)
+                ws.cell(row=row, column=2, value=item.product.sku)
+                ws.cell(row=row, column=3, value=item.quantity)
+                ws.cell(row=row, column=4, value=float(item.price_each))
+                ws.cell(row=row, column=5, value=float(item.get_subtotal()))
+                row += 1
+            
+            # Total
+            ws.cell(row=row+1, column=4, value='Total:')
+            ws.cell(row=row+1, column=4).font = header_font
+            ws.cell(row=row+1, column=5, value=float(invoice.get_total_amount()))
+            ws.cell(row=row+1, column=5).font = header_font
+            
+            # Adjust column widths
+            for col in ['A', 'B', 'C', 'D', 'E']:
+                ws.column_dimensions[col].width = 20
+            
+            # Create response
+            buffer = BytesIO()
+            wb.save(buffer)
+            buffer.seek(0)
+            
+            # Set proper content type and filename
+            filename = f"Invoice_{invoice.invoice_number}.xlsx"
+            content_type = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+            
+            # Create the HttpResponse object with proper content-type and headers
+            response = HttpResponse(
+                buffer.getvalue(),
+                content_type=content_type
+            )
+            response['Content-Disposition'] = f'attachment; filename="{filename}"'
+            
+            # Add a success message
+            messages.success(request, f'Invoice {invoice.invoice_number} has been exported successfully.')
+            
+            return response
+            
+        except Exception as e:
+            messages.error(request, f'Error exporting invoice: {str(e)}')
+            return None
+            
     export_to_xlsx.short_description = 'Export to XLSX'
     
 # We don't register these models directly as they are used in inlines
